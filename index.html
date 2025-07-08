@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Générateur Mobile Money</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#007bff">
+  <link rel="icon" href="icon-192.png">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 500px;
+      margin: 40px auto;
+      background: #f9f9f9;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    label, select, input, button {
+      display: block;
+      width: 100%;
+      margin-bottom: 15px;
+      font-size: 16px;
+    }
+    input, select {
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      padding: 10px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    #result {
+      margin-top: 20px;
+    }
+    #qr-container img {
+      max-width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <h2>Générateur Mobile Money</h2>
+  <label for="canal">Choisir le canal de partage</label>
+  <select id="canal" onchange="afficherChamps()">
+    <option value="whatsapp">WhatsApp</option>
+    <option value="messenger">Messenger</option>
+    <option value="sms">SMS</option>
+    <option value="gmail">Gmail</option>
+    <option value="qrcode">QR Code</option>
+  </select>
+
+  <div id="champNumero">
+    <label for="numero">Numéro ou Email destinataire</label>
+    <input type="text" id="numero" placeholder="Ex: 22890123456 ou email">
+  </div>
+
+  <label for="montant">Montant</label>
+  <input type="number" id="montant" placeholder="Ex: 2000">
+
+  <label for="reseau">Réseau</label>
+  <select id="reseau">
+    <option value="Moov">Moov Money Flooz</option>
+    <option value="Mixx">Mixx By Yas</option>
+  </select>
+
+  <label for="beneficiaire">Numéro Mobile Money (bénéficiaire)</label>
+  <input type="text" id="beneficiaire" placeholder="Ex: 90123456">
+
+  <button onclick="generer()">Générer</button>
+
+  <div id="result"></div>
+
+  <script>
+    function afficherChamps() {
+      const canal = document.getElementById("canal").value;
+      const champ = document.getElementById("champNumero");
+      champ.style.display = (canal === "qrcode") ? "none" : "block";
+    }
+
+    function generer() {
+      const canal = document.getElementById("canal").value;
+      const numero = document.getElementById("numero").value.trim();
+      const montant = document.getElementById("montant").value.trim();
+      const reseau = document.getElementById("reseau").value;
+      const beneficiaire = document.getElementById("beneficiaire").value.trim();
+
+      if (!montant || !beneficiaire) {
+        alert("Veuillez remplir le montant et le numéro du bénéficiaire.");
+        return;
+      }
+
+      let ussd = "";
+      if (reseau === "Moov") {
+        ussd = `*155*1*1*${beneficiaire}*${beneficiaire}*${montant}*1#`;
+      } else if (reseau === "Mixx") {
+        ussd = `*145*1*${montant}*${beneficiaire}*1#`;
+      }
+
+      const message = `Transfert Mobile Money ${reseau} de ${montant} FCFA : tel:${ussd}`;
+      const telCode = `tel:${ussd}`;
+      let output = "";
+
+      if (canal === "qrcode") {
+        const qrURL = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(telCode)}&size=200x200`;
+        output = `<p><strong>Code QR à scanner :</strong></p><div id="qr-container"><img src="${qrURL}" alt="QR Code"></div>`;
+      } else {
+        let lien = "";
+        if (!numero) {
+          alert("Veuillez saisir un numéro ou une adresse.");
+          return;
+        }
+
+        if (canal === "whatsapp") {
+          const text = encodeURIComponent(message);
+          lien = `https://wa.me/${numero}?text=${text}`;
+        } else if (canal === "sms") {
+          const messageSMS = `Tapez ce code pour payer : ${ussd}`;
+          const textSMS = encodeURIComponent(messageSMS);
+          lien = `sms:${numero}?body=${textSMS}`;
+        } else if (canal === "gmail") {
+          const subject = encodeURIComponent("Paiement Mobile Money");
+          const body = encodeURIComponent(message);
+          lien = `mailto:${numero}?subject=${subject}&body=${body}`;
+        } else if (canal === "messenger") {
+          lien = `fb-messenger://share?link=${encodeURIComponent(telCode)}`;
+        }
+
+        output = `<p><strong>Lien généré :</strong></p><a href="${lien}" target="_blank">${lien}</a>`;
+      }
+
+      document.getElementById("result").innerHTML = output;
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(() => console.log("Service Worker enregistré"))
+        .catch((err) => console.error("Service Worker échec:", err));
+    }
+  </script>
+</body>
+</html>
