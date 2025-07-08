@@ -106,8 +106,13 @@
       const telCode = `tel:${ussd}`;
       let output = "";
 
+     
+
       if (canal === "qrcode") {
         const qrURL = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(telCode)}&size=200x200`;
+        document.getElementById("qr-container").innerHTML = "";
+  new QRCode(document.getElementById("qr-container"), telCode);
+  return;
         output = `<p><strong>Code QR à scanner :</strong></p><div id="qr-container"><img src="${qrURL}" alt="QR Code"></div>`;
       } else {
         let lien = "";
